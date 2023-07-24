@@ -4,9 +4,11 @@
 ## Overview
 This project is a Flutter application that is Voice-Chat-Bot.i am learning and trying to use clean architecture
 ## Demo Video
-https://github.com/RootHex200/voice_chat_bot/assets/78146827/20b53dba-50be-4e2d-80b1-2c4344fc565d
+https://github.com/RootHex200/voice_message_bot/assets/78146827/03fc1b55-b0e0-4297-aa78-bce204585613
 ## Requirements
-To run this project, you need to have the following software installed on your machine:
+To run this project, you need to have the following software installed on your mac
+
+hine:
 - Dart ('>=3.0.3 <4.0.0')
 - Assembly Ai Token:- https://www.assemblyai.com/
 - Configure Firebase proejct
