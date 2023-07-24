@@ -16,21 +16,3 @@ final voicechatmessageProvider = StreamProvider<List<VoicechatModel>>((ref)async
   }, (r) => r);
   });
 });
-
-
-
-final aduioProvider = StateNotifierProvider<AudioNotifier,bool>((ref) {
-  return AudioNotifier(voiceChatUseCase: ref.watch(voicechatusecaseProvider));
-});
-
-class AudioNotifier extends StateNotifier<bool> {
-  
-  AudioNotifier({required this.voiceChatUseCase}): super(false);
-  final VoiceChatUseCase voiceChatUseCase;
-  void startRecordAudio()async {
-    voiceChatUseCase.startRecordAudio();
-  }
-  void stoptRecordAudio()async {
-    voiceChatUseCase.stoptRecordAudio();
-  }
-}

@@ -1,6 +1,5 @@
 import 'dart:developer';
 import 'dart:io';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,8 +13,10 @@ import 'package:voice_chat_bot/src/feature/voice_chat/service/audio_to_text_serv
 class VoiceChatRepositoryImp implements VoiceChatRepository {
   VoiceChatRepositoryImp({required this.voiceChatDataSource});
   final VoiceChatDataSource voiceChatDataSource;
+  
+  
   final record = Record();
-
+  AudioTextConvertorService audioService = AudioTextConvertorService();
   @override
   Stream<Either<Exception, List<VoicechatModel>>> getVoiceChats() async* {
     CollectionReference voicechatCollection = voiceChatDataSource.voiceChats();
@@ -36,47 +37,6 @@ class VoiceChatRepositoryImp implements VoiceChatRepository {
       }
     });
   }
-
-  Future<Either<Exception, String>> saveVoiceChatData(String path,bool me) async {
-    try {
-      final uploadfileTostorage = await saveDataToStorage(path);
-      final filedownloadurl = uploadfileTostorage.fold((l) => null, (r) => r);
-
-      if (filedownloadurl != null) {
-        final uploadDataToFirestore =
-            await saveDataToFirestore("YfX9DwCBHGYb6hUKpInfQ7KhnPF2", {
-          "voice_message_url": filedownloadurl,
-          "createAt": Timestamp.fromDate(DateTime.now()),
-          "me": me
-        });
-        uploadDataToFirestore.fold((l) {
-          log("sendvoicechatdata save firebase", error: l);
-          return null;
-        }, (r) => r);
-      }
-      return const Right("store data successfully");
-    } catch (e) {
-      log("sendvoicechatdata", error: e);
-      return Left(e as Exception);
-    }
-  }
-
-  Future<Either<Exception, String>> getTextfromAudio(path) async {
-    final response=await AudioToTextConvertor().getMessageFromAudio(path);
-
-    final text=response.fold((l) {
-      log("error from getTextFormAudio repos",error: l);
-      return null;
-    }, (r) {
-      return r;
-    });
-    if(text!=null){
-      return Right(text);
-    }else{
-      return Left(Exception("getTextFormAudio"));
-    }
-  }
-
   @override
   Future<Either<Exception, bool>> startRecordAudio() async {
     try {
@@ -96,69 +56,73 @@ class VoiceChatRepositoryImp implements VoiceChatRepository {
   }
 
   @override
-  void stoptRecordAudioAndUploadFile() async {
+  Future<Either<Exception, String>> stoptRecordAudio() async {
     final path = await record.stop();
-    print("here is file path of sotp aduio: $path");
-    //save file to firebase
-    if(path!=null){
-    final data = await saveVoiceChatData(path,true);
-    data.fold((l) {
-      log("save data to firestore error");
-      return null;
-    }, (r) {
-      log("save data to firestore success",error: "error");
-      
-      return r;
-    });
-    textToAudioAndUploadFile(path);
-    }
-  }
-
-  void textToAudioAndUploadFile(audiopath)async{
-    log("data from textToAudioAndUploadFile");
-    FlutterTts flutterTts = FlutterTts();
-    var fileName =
-          "${DateTime.now().toString().split(" ")[0]}_${DateTime.now().millisecondsSinceEpoch.toString()}.wav";
-    try{
-    final response = await getTextfromAudio(audiopath);
-    final text=response.fold((l) {
-      log("convert audio to text error",error: l);
-      return null;
-    }, (r) {
-      log("convert audio to text success");
-      return r;
-    });
-    if(text!=null){
-      await flutterTts.synthesizeToFile(text.toString().toLowerCase().trim(), Platform.isAndroid ?fileName : "tts.caf");
-      //to add gpt chat
-      // final gptresponse=await ChatGptService().getMessageFromGpt(text);
-      // gptresponse.fold((l) {
-      //   log("message from chat gpt service",error: l);
+    log("here is file path of sotp aduio: $path");
+    if (path != null) {
+      return Right(path);
+      // final data = await saveVoiceChatData(path,true);
+      // data.fold((l) {
+      //   log("save data to firestore error");
       //   return null;
-      // }, (r)async {
-      //   await flutterTts.synthesizeToFile(r.toString().toLowerCase().trim(), Platform.isAndroid ?fileName : "tts.caf");
+      // }, (r) {
+      //   log("save data to firestore success",error: "error");
+
       //   return r;
       // });
-      
-      
+      // textToAudioAndUploadFile(path);
     }
-    await Future.delayed(Duration.zero,()async{
-      var appExternalDirectory = await getExternalStorageDirectory();
-      var newpath =
-          "${appExternalDirectory!.path}/$fileName";
-    final response=await saveVoiceChatData(newpath, false);
-    response.fold((l) {
-      log("save gpt to firestore error");
+    return Left(Exception("path is empty"));
+  }
+
+
+  @override
+  Future<Either<Exception, String>> saveUserAudioFileToDatabase(
+      String path) async {
+        return await saveaudioFileToDatabase(path,true);
+  }
+
+  @override
+  Future<Either<Exception, String>> generateBotAudioFileandSaveToDatabase(
+      String userAudiopath) async {
+    //get text from user audio file
+    final getmessageresponse = await audioService.getMessageFromAudio(userAudiopath);
+    final userTextfromAudio = getmessageresponse.fold((l) {
+      log("error from getTextFormAudio repos", error: l);
       return null;
     }, (r) {
-      log("save gpt to firestore success");
-      File(audiopath).delete();
-      File(newpath).delete();
       return r;
     });
-    });
-    }catch (e){
-      log("textToAudioAndUploadFile",error: e);
+
+    //genearte bot audio file from this.text
+    if (userTextfromAudio != null) {
+      final getAudioresponse = await audioService.getAudioFromMessage(userTextfromAudio);
+      final botAudioFilename = getAudioresponse.fold((l) {
+        log("error from getAudioFromMessage repos", error: l);
+        return null;
+      }, (r) {
+        return r;
+      });
+
+      //save bot audio file to firebase
+      if(botAudioFilename!=null){
+        await Future.delayed(Duration.zero, () async {
+        var appExternalDirectory = await getExternalStorageDirectory();
+        var botAudioPath = "${appExternalDirectory!.path}/$botAudioFilename";
+        final response = await saveaudioFileToDatabase(botAudioPath, false);
+        response.fold((l) {
+          log("save gpt to firestore error");
+          return null;
+        }, (r) {
+          log("save gpt to firestore success");
+          File(userAudiopath).delete();
+          File(botAudioPath).delete();
+          return r;
+        });
+      });
+      }
+      return const Right("save bot audio file to database");
     }
+    return Left(Exception("userTextfromAudio is null"));
   }
 }

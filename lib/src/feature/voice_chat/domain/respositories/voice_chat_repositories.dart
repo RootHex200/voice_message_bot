@@ -17,7 +17,16 @@ final voicechatRepositoryProvider = Provider<VoiceChatRepository>((ref) {
 
 
 abstract class VoiceChatRepository{
+
   Stream<Either<Exception,List<VoicechatModel>>> getVoiceChats();
   void startRecordAudio();
-  void stoptRecordAudioAndUploadFile();
+  Future<Either<Exception,String>> stoptRecordAudio();
+
+  //store user aduio file to database
+
+  Future<Either<Exception,String>> saveUserAudioFileToDatabase(String useraudiopath);
+
+  // store botgenerate audio file to database
+
+  Future<Either<Exception,String>> generateBotAudioFileandSaveToDatabase(String userAudiopath);
 }

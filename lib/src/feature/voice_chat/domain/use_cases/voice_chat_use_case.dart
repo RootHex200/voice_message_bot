@@ -24,7 +24,15 @@ class VoiceChatUseCase {
   void startRecordAudio()async {
     repository.startRecordAudio();
   }
-  void stoptRecordAudio()async {
-    repository.stoptRecordAudioAndUploadFile();
+  Future<Either<Exception,String>> stoptRecordAudio()async {
+   return await repository.stoptRecordAudio();
+  }
+
+  Future<Either<Exception,String>> saveUserAudioFileToDatabase(String useraudiopath)async {
+    return await repository.saveUserAudioFileToDatabase(useraudiopath);
+  }
+
+  Future<Either<Exception,String>> generateBotAudioFileandSaveToDatabase(String userAudiopath)async {
+    return await repository.generateBotAudioFileandSaveToDatabase(userAudiopath);
   }
 }
